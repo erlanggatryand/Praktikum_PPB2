@@ -1,101 +1,138 @@
-import 'package:dio/dio.dart';
 
+import 'package:dio/dio.dart';
 import '../models/product_model.dart';
 
 class ApiServiceProducts {
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'https://dummyjson.com',
+      baseUrl: 'http://localhost/products_api/api.php',
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 15),
       headers: {'Content-Type': 'application/json'},
     ),
   );
 
-  // 1. GET ALL PRODUCTS
-  Future<ProductResponse> getAllProducts({int limit = 30, int skip = 0}) async {
-    final res = await _dio.get(
-      '/products',
-      queryParameters: {'limit': limit, 'skip': skip},
-    );
-    return ProductResponse.fromJson(res.data);
-  }
-
-  // 2. GET SINGLE PRODUCT
-  Future<Product> getProduct(int id) async {
-    final res = await _dio.get('/products/$id');
-    return Product.fromJson(res.data);
-  }
-
-  // 3. SEARCH PRODUCTS
-  Future<ProductResponse> searchProducts(String query) async {
-    final res = await _dio.get(
-      '/products/search',
-      queryParameters: {'q': query},
-    );
-    return ProductResponse.fromJson(res.data);
-  }
-
-  // 4. LIMIT, SKIP, SELECT PAGINATION
-  Future<ProductResponse> getProductsPaginated({
-    int limit = 10,
+  // READ: mengambil semua produk
+  Future<ProductResponse> getAllProducts({
+    int limit = 100,
     int skip = 0,
-    String? select,
   }) async {
-    Map<String, dynamic> params = {'limit': limit, 'skip': skip};
-    if (select != null) params['select'] = select;
-    final res = await _dio.get('/products', queryParameters: params);
-    return ProductResponse.fromJson(res.data);
+    final response = await _dio.get('');
+    return ProductResponse.fromJson(response.data);
   }
 
-  // 5. SORT PRODUCTS
-  Future<ProductResponse> sortProducts(String sortBy, String order) async {
-    final res = await _dio.get(
-      '/products',
-      queryParameters: {'sortBy': sortBy, 'order': order},
+  // READ: mengambil satu produk
+  Future<Product> getProduct(int id) async {
+    final response = await _dio.get(
+      '',
+      queryParameters: {'id': id},
     );
-    return ProductResponse.fromJson(res.data);
+
+    return Product.fromJson(response.data['product']);
   }
 
-  // 6. GET CATEGORIES
-  Future<List<String>> getCategories() async {
-    final res = await _dio.get('/products/categories');
-    return (res.data as List).map((e) => e.toString()).toList();
-  }
-
-  // 7. GET CATEGORY LIST
+  // Mengambil daftar kategori unik
   Future<List<String>> getCategoryList() async {
-    final res = await _dio.get('/products/category-list');
-    return (res.data as List).map((e) => e.toString()).toList();
+    final response = await _dio.get('');
+    final products = response.data['products'] as List;
+
+    return products
+        .map((item) => item['category'].toString())
+        .toSet()
+        .toList();
   }
 
-  // 8. GET PRODUCTS BY CATEGORY
+  // SEARCH: mencari produk berdasarkan nama
+  Future<ProductResponse> searchProducts(String query) async {
+    final response = await _dio.get('');
+    final products = response.data['products'] as List;
+
+    final filtered = products.where((item) {
+      return item['title']
+          .toString()
+          .toLowerCase()
+          .contains(query.toLowerCase());
+    }).toList();
+
+    return ProductResponse.fromJson({
+      'products': filtered,
+      'total': filtered.length,
+      'skip': 0,
+      'limit': filtered.length,
+    });
+  }
+
+  // FILTER: berdasarkan kategori
   Future<ProductResponse> getProductsByCategory(String category) async {
-    final res = await _dio.get('/products/category/$category');
-    return ProductResponse.fromJson(res.data);
+    final response = await _dio.get('');
+    final products = response.data['products'] as List;
+
+    final filtered = products.where((item) {
+      return item['category'].toString().toLowerCase() ==
+          category.toLowerCase();
+    }).toList();
+
+    return ProductResponse.fromJson({
+      'products': filtered,
+      'total': filtered.length,
+      'skip': 0,
+      'limit': filtered.length,
+    });
   }
 
-  // 9. ADD PRODUCT (POST)
-  Future<Product> addProduct(Map<String, dynamic> data) async {
-    final res = await _dio.post('/products/add', data: data);
-    return Product.fromJson(res.data);
+  // SORT: berdasarkan kolom dan urutan
+  Future<ProductResponse> sortProducts(
+    String sortBy,
+    String order,
+  ) async {
+    final response = await _dio.get('');
+    final products = response.data['products'] as List;
+
+    final sorted = List<dynamic>.from(products);
+
+    sorted.sort((a, b) {
+      int result;
+
+      if (sortBy == 'price' || sortBy == 'rating' || sortBy == 'stock') {
+        result = double.parse(a[sortBy].toString())
+            .compareTo(double.parse(b[sortBy].toString()));
+      } else {
+        result = a[sortBy]
+            .toString()
+            .toLowerCase()
+            .compareTo(b[sortBy].toString().toLowerCase());
+      }
+
+      return order.toLowerCase() == 'desc' ? -result : result;
+    });
+
+    return ProductResponse.fromJson({
+      'products': sorted,
+      'total': sorted.length,
+      'skip': 0,
+      'limit': sorted.length,
+    });
   }
 
-  // 10. UPDATE PRODUCT (PUT)
-  Future<Product> updateProduct(int id, Map<String, dynamic> data) async {
-    final res = await _dio.put('/products/$id', data: data);
-    return Product.fromJson(res.data);
+  // CREATE: menambahkan produk
+  Future<void> addProduct(Map<String, dynamic> data) async {
+    await _dio.post('', data: data);
   }
 
-  // 11. PATCH PRODUCT
-  Future<Product> patchProduct(int id, Map<String, dynamic> partialData) async {
-    final res = await _dio.patch('/products/$id', data: partialData);
-    return Product.fromJson(res.data);
+  // UPDATE: mengubah produk
+  Future<void> updateProduct(int id, Map<String, dynamic> data) async {
+    await _dio.put(
+      '',
+      queryParameters: {'id': id},
+      data: data,
+    );
   }
 
-  // 12. DELETE PRODUCT
-  Future<Product> deleteProduct(int id) async {
-    final res = await _dio.delete('/products/$id');
-    return Product.fromJson(res.data);
+  // DELETE: menghapus produk
+  Future<void> deleteProduct(int id) async {
+    await _dio.delete(
+      '',
+      queryParameters: {'id': id},
+    );
   }
 }

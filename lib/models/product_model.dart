@@ -130,16 +130,16 @@ class Product {
     );
   }
 
-  Product.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    title = json['title'];
-    description = json['description'];
-    category = json['category'];
-    price = (json['price'] as num?)?.toDouble() ?? 0.0;
-    discountPercentage =
-        (json['discountPercentage'] as num?)?.toDouble() ?? 0.0;
-    rating = (json['rating'] as num?)?.toDouble() ?? 0.0;
-    stock = (json['stock'] as num?)?.toInt() ?? 0;
+Product.fromJson(Map<String, dynamic> json) {
+  id = int.tryParse(json['id'].toString()) ?? 0;
+  title = json['title'];
+  description = json['description'];
+  category = json['category'];
+  price = double.tryParse(json['price'].toString()) ?? 0.0;
+  discountPercentage =
+      (json['discountPercentage'] as num?)?.toDouble() ?? 0.0;
+  rating = (json['rating'] as num?)?.toDouble() ?? 0.0;
+  stock = int.tryParse(json['stock'].toString()) ?? 0;
     tags = json['tags'] != null ? List<String>.from(json['tags']) : null;
     brand = json['brand'];
     sku = json['sku'];

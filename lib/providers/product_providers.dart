@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 
 import '../models/product_model.dart';
@@ -18,11 +19,11 @@ class ProductProvider extends ChangeNotifier {
   List<String> get categoryList => _categoryList;
   bool get loading => _loading;
   int get total => _total;
-  int get skip => _skip; // Ditambahkan agar _skip bisa diakses jika diperlukan
+  int get skip => _skip;
   String get selectedCategory => _selectedCategory;
   String? get error => _error;
 
-  Future<void> fetchProduct({int limit = 30, int skip = 0}) async {
+  Future<void> fetchProduct({int limit = 100, int skip = 0}) async {
     _loading = true;
     _error = null;
     _selectedCategory = '';
@@ -52,7 +53,9 @@ class ProductProvider extends ChangeNotifier {
   }
 
   Future<void> searchProducts(String query) async {
-    if (query.isEmpty) return fetchProduct();
+    if (query.isEmpty) {
+      return fetchProduct();
+    }
 
     _loading = true;
     _error = null;
@@ -102,6 +105,7 @@ class ProductProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // UPDATE: mengubah produk
   Future<bool> updateProduct(int id, Product updated) async {
     _loading = true;
     _error = null;
@@ -110,19 +114,37 @@ class ProductProvider extends ChangeNotifier {
     bool success = false;
 
     try {
-      final result = await _api.updateProduct(id, updated.toJson());
-      int idx = _products.indexWhere((p) => p.id == id);
+      await _api.updateProduct(id, updated.toJson());
+
+      final idx = _products.indexWhere((p) => p.id == id);
+
       if (idx != -1) {
-        _products[idx] = result;
+        _products[idx] = updated;
       }
-      success = true; // Berhasil update
+
+      success = true;
     } catch (e) {
       _error = e.toString();
-      success = false; // Gagal update
     }
 
     _loading = false;
     notifyListeners();
     return success;
   }
+
+  // DELETE: menghapus produk
+  Future<bool> deleteProduct(int id) async {
+    try {
+      await _api.deleteProduct(id);
+      _products.removeWhere((p) => p.id == id);
+      _total = _products.length;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+  
 }
